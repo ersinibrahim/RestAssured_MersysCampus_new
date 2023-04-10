@@ -1,0 +1,18 @@
+<suite name="Suite">
+
+    <test name="Test">
+
+        <classes>
+
+            <class name="Country.mersysCampus_login">
+
+
+            </class>
+
+        </classes>
+
+
+    </test>
+
+
+</suite>

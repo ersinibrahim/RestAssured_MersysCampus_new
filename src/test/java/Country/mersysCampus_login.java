@@ -12,6 +12,7 @@ import java.util.Map;
 
 import static io.restassured.RestAssured.baseURI;
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.*;
 
 public class mersysCampus_login {
 
@@ -20,16 +21,15 @@ public class mersysCampus_login {
 
 
     @BeforeClass
-    public void loginBasqar()
-    {
-        baseURI="https://test.mersys.io";
+    public void loginBasqar() {
+        baseURI = "https://test.mersys.io";
 
-        Map<String,String> crenditial=new HashMap<>();
-        crenditial.put("username","turkeyts");
-        crenditial.put("password","TechnoStudy123");
-        crenditial.put("rememberMe","true");
+        Map<String, String> crenditial = new HashMap<>();
+        crenditial.put("username", "turkeyts");
+        crenditial.put("password", "TechnoStudy123");
+        crenditial.put("rememberMe", "true");
 
-        cookies=
+        cookies =
                 given()
                         .body(crenditial)
                         .contentType(ContentType.JSON)
@@ -43,34 +43,92 @@ public class mersysCampus_login {
         System.out.println("cookies = " + cookies);
 
 
-
     }
 
+    String randomGenName = RandomStringUtils.randomAlphabetic(6);
+    String randomGenCode = RandomStringUtils.randomNumeric(3);
+
+    String countryId;
+
+    Country country = new Country();
 
     @Test
-    public void createCountry(){
+    public void createCountry() {
 
-        String randomGenName= RandomStringUtils.randomAlphabetic(6);
-        String randomGenCode= RandomStringUtils.randomNumeric(3);
 
-        Country country=new Country();
         country.setName(randomGenName);
         country.setCode(randomGenCode);
 
+
+        countryId =
+                given()
+                        .cookies(cookies)
+                        .contentType(ContentType.JSON)
+                        .body(country)
+                        .when()
+                        .post("/school-service/api/countries")
+
+
+                        .then()
+                        .statusCode(201)
+                        .body("name", equalTo(randomGenName))
+                        .log().body()
+                        .extract().jsonPath().getString("id")
+
+
+        ;
+
+
+    }
+
+    @Test(dependsOnMethods = "createCountry")
+    public void createCountryNegative() {
+
+
+        country.setName(randomGenName);
+        country.setCode(randomGenCode);
 
 
         given()
                 .cookies(cookies)
                 .contentType(ContentType.JSON)
                 .body(country)
+
                 .when()
                 .post("/school-service/api/countries")
 
 
                 .then()
-                .statusCode(201)
-                .log().body()
+                .statusCode(400)
+                .body("message", equalTo("The Country with Name \"" + randomGenName + "\" already exists."))
 
+
+        ;
+
+
+    }
+
+    @Test(dependsOnMethods = "createCountry")
+    public void updateCountry() {
+        String updateCountryName = RandomStringUtils.randomAlphabetic(6);
+
+        Country country = new Country();
+        country.setId(countryId);
+        country.setName(updateCountryName);
+
+
+        given()
+                .cookies(cookies)
+                .contentType(ContentType.JSON)
+                .body(country)
+
+                .when()
+                .put("/school-service/api/countries")
+
+
+                .then()
+                .statusCode(200)
+                .body("name", equalTo(updateCountryName))
 
 
         ;
@@ -79,8 +137,53 @@ public class mersysCampus_login {
     }
 
 
+    @Test(dependsOnMethods = "updateCountry")
+    public void deleteCountry() {
+
+        given()
+
+                .cookies(cookies)
+                .pathParam("countryId", countryId)
+                .contentType(ContentType.JSON)
+                .body(country)
 
 
+                .when()
+                .delete("/school-service/api/countries/{countryId}")
+
+
+                .then()
+                .statusCode(200)
+                .log().body()
+
+
+        ;
+
+
+    }
+
+    @Test(dependsOnMethods = "deleteCountry")
+    public void deleteCountryNegative() {
+
+        given()
+
+                .cookies(cookies)
+                .pathParam("countryId", countryId)
+
+
+                .when()
+                .delete("/school-service/api/countries/{countryId}")
+
+
+                .then()
+                .statusCode(404)
+                .log().body()
+
+
+        ;
+
+
+    }
 
 
 }
